@@ -1,0 +1,320 @@
+*smartput.txt*	Adjust spaces and commas when putting text.
+
+		For Vim version 7.0.  Last change: 2007 Dec 15
+		By Andy Wokula, anwoku#yahoo*de (#* -> @.)
+
+						*smartput* *smartput.vim*
+
+ 1. Intro					|smartput-intro|
+ 2. Installation				|smartput-install|
+ 3. Usage					|smartput-usage|
+ 4. Customization				|smartput-customize|
+ 5. Examples					|smartput-examples|
+
+==============================================================================
+ 1. Intro					*smartput-intro*
+
+From Vim7's |todo| list:
+Smart cut/paste: Recognize words and adjust spaces before/after them. ~
+
+Smartput tries to reduce the need of fine-tuning spaces after a put.  Under
+certain conditions, it also moves a comma to the other side of the register
+before putting.
+
+The default settings support editing normal text.  They may not be well suited
+for programming.  Find a remedy: |smartput-customize|.
+
+==============================================================================
+ 2. Installation				*smartput-install*
+
+Smartput is a plugin, you can put it in a |plugin| folder of your
+'runtimepath' or |:source| it directly.  Typical locations:
+	~/.vim/plugin/smartput.vim				(Unix) ~
+	{programs-folder}\vim\vimfiles\plugin\smartput.vim	(Win)~
+Do not forget Smartput has been enabled (to not blame Vim for odd bugs you
+might face ;-).  I keep it on all the time and enjoy it most of the time ;-).
+
+Install this help file: |:helptags|.
+
+Be sure to have a key mapped to  <plug>SmartputToggle  to be able to switch
+back to the default put commands.  Currently  <Leader>st  is mapped if unused:
+>
+	:nmap <unique> <leader>st <plug>SmartputToggle
+
+Smartput will warn you at startup if <Leader>st initially is mapped to
+something else.  See also: |<Leader>|.
+
+==============================================================================
+ 3. Usage					*smartput-usage*
+
+Use the modified put commands |p|, |P|, |gp| and |gP|.  Mappings exist for
+Normal mode only, not for Visual mode.  As usual, you can provide a count and
+a register.  You can also use |.| to repeat the put.
+
+Standard put applies for the registers
+	: . % # = _ ~
+Standard put also applies if the register content is not characterwise!
+
+						*:SmartputToggle*
+:SmartputToggle [on | off | bufon | bufoff | stats]
+			Enable or disable Smartput globally (on, off) or for
+			the buffer only (bufon, bufoff).  Default is toggling
+			on and off .  bufon  means reverting to the global
+			setting, bufoff really switches off.  The  stats
+			argument prints the current settings.  See also
+			|g:smartput|.
+
+Notes:
+The "xp" trick is still supported (mentioned here: |usr_04|, search /xp ).
+
+When repeating the put, no adjustment takes place (of course).
+
+When repeating a put-with-count, in some cases the repetition includes one
+less instance of the put text.  E.g. "3p." on an empty line with "abc" in the
+register gains "abc abc abc abc abc".  This is because "3p" was executed as:
+1x put "abc", 2x put " abc".
+
+==============================================================================
+ 4. Customization				*smartput-customize*
+
+Sections:
+  Startup
+  Fine-tuning spaces
+  Flipping commas
+  Global and local settings
+
+Startup
+-------
+						*g:smartput*
+You can have Smartput load without mapping of any keys: >
+	let g:smartput = 0	" ~/.vimrc
+To enable smartput now, press  <Leader>st .
+
+You can disable Smartput for a certain filetype {xyz}: >
+	if exists("loaded_smartput")
+	    SmartputToggle bufoff
+	endif
+A good place for the above lines is
+	~/.vim/after/ftplugin/{xyz}.vim ~
+To revert the buffer to the global settings, execute >
+	:SmartputToggle bufon
+
+Disabling Smartput locally really means disabling.  Enabling locally means
+reverting to global enable/disable status.
+
+Fine-tuning spaces
+------------------
+You can control the insertion of spaces, what you want to be a comma and when
+to flip a comma.  Two terms first:
+
+cut point ~
+A "cut point" describes a location between two characters (one from the text,
+the other from the register) where old text in the line will meet text to be
+put.  Smartput looks at those two characters around a cut point to decide what
+to do.  Before operation, all white space around a cut point is removed --
+except left from the cursor position, to keep the indent.
+
+CharType ~
+Smartput maps characters that it reads from the text and the register to other
+characters, called "CharTypes", for rule matches.  A CharType should collate
+characters with similar behavior.  Predefined CharTypes are
+	k	keyword characters, see |g:smartput_keyword|
+	s	start of line (special case)
+	e	end of line (special case)
+	b	backslash
+Additional mappings are defined with |g:smartput_types|.  Non-mapped
+characters represent themselves.
+
+Rules ~
+CharTypes are to be used in rules.  Rules list the cases, where a space
+character is to be inserted at a cut point.  Because white space is removed
+first, without a rule no space is inserted.
+
+			*g:smartput_app1* *g:smartput_ins2* *g:smartput_keep2*
+CharTypes that get a space behind (see g:smartput_keep2): >
+	:let g:smartput_app1 = ',.!?:'
+Pairs where to insert a space in between: >
+	:let g:smartput_ins2 = 'kk k( )k /k )('
+Pairs where to not insert a space (overwrite g:smartput_app1): >
+	:let g:smartput_keep2 = ",e .e !e ?e :e ,, .,"
+<
+						*g:smartput_keyword*
+Pattern for characters to be mapped to CharType "k": >
+	:let g:smartput_keyword = '\k'
+The pattern should match the alphabetic characters -- at least those used to
+define CharTypes: "s", "e", "k", "b", ...
+
+						*g:smartput_types*
+Define additional CharType mappings.  Each WORD maps one or more characters to
+a CharType (= the last character of the WORD). >
+	:let g:smartput_types = "\t".'s s [({<( ])}>) ,;,'
+The first two WORDs map white space to the CharType "s".
+The third WORD maps the characters "[", "(", "{" and "<" to the CharType "(".
+
+Flipping commas
+---------------
+From Smartput's point of view, commas are CharTypes that can switch sides in
+the register.
+
+						*g:smartput_comma*
+Pattern for CharTypes that can switch sides in the register: >
+	:let g:smartput_comma = '[,]'
+This flips the characters "," and ";" (note the ",;," mapping in
+|g:smartput_types|).
+
+						*g:smartput_flipcomma*
+When to flip a comma (space separated pairs of CharTypes): >
+	:let g:smartput_flipcomma = '(, ,) s, ,e ,. ,! ,? ,,'
+"(," means: move comma to the other side of put text if "(" meets "," at a cut
+point.  Also for "(;", "[,", "[;", "{,", ... (see |g:smartput_types|)
+
+Global and local settings
+-------------------------
+global overrides ~
+Above are the hardwired defaults.  To overwrite them you could use a
+	~/.vim/after/plugin/smartput.vim ~
+file or a VimEnter autocommand in the vimrc.  This works because changes
+during session take effect.
+
+buffer local overrides ~
+It is possible to define buffer local variables of the same name to override
+the defaults (like buffer-local versus global Vim options).  For example to
+not insert a space after a ".": >
+	:let b:smartput_app1 = ',;!?:'
+Don't forget to add >
+	:let b:undo_ftplugin .= "|unlet b:smartput_app1"
+in an ftplugin script.
+
+==============================================================================
+ 5. Examples					*smartput-examples*
+
+Smartput in action:
+
+Exchange two words in a line:
+	two words~
+	^ move cursor here, onto the "t"
+	two words~
+	^ dw (press dw to delete "two ")
+	words~
+	    ^ p (press p)
+	result with standard put:
+	wordstwo ~
+	result with smartput:
+	words two~
+
+The other way round:
+	two words~
+	    ^ daw
+	two~
+	^ P
+	put:
+	 wordstwo~
+	smartput:
+	words two~
+
+Switch words in a sentence separated by a comma:
+	Two, words.~
+	^ dW
+	words.~
+	    ^ p
+	put:
+	wordsTwo, .~
+	smartput:
+	words, Two.~
+
+Use undo in ambigious situations:
+	(abc, def, )~
+	 ^ dW
+	(def, )~
+	     ^ p
+	(def, , abc)~
+	u
+	(def, )~
+	p
+	(def, abc, )~
+	u
+	...~
+
+The noted count example:
+	abc~
+	^ de
+	()~
+	 ^ 3P
+	(abc abc abc)~
+	.
+	(abc abc abc abc abc)~
+
+Here it works as expected:
+	abc~
+	^ de
+	(foo)~
+	   ^ 3p.
+	(foo abc abc abc abc abc abc)~
+
+Where Smartput works not so well:
+	"two", words~
+	       ^ de
+	"two", ~
+	    ^ p
+	"two"words, ~
+	actually we want
+	"two" words, ~
+	but it's unclear what to do after a quote.
+
+==============================================================================
+TODO						*smartput-todo*
+
+- better customization defaults
+- howto handle ambigious situations, e.g. quotes; collect these situations;
+  look at the sit. before?; only move spaces within the put? option to keep
+  white space as it is?
+  a try: before putting after a quote, check the character after it (before
+  trimming white space!); e.g. if it is ",", guess we are at the end of quoted
+  text and not at the start; now if we insert a keyword char, separate it by a
+  space.
+- check multibyte support
+- better rule system (allow rule exceptions for characters already bound to a
+  CharType, e.g. a rule for "]["; precedence adjustments)
+? use a dictionary for custom vars
++ standard put if using a read-only register (e.g. ":")
++ backslash needs escape()
++ improved put with count
++ option to quickly toggle smartput on and off
+  :SmartputToggle
++ vmap
+  ! dropped, not useful for Visual mode
++ version with buffer local customization variables like matchit plugin
++ b:option to turn smartput off per default
+
+Bugs:
+? 'virtualedit=all': putting into a hardtab places text at the hardtab's
+  first column
+? user must not remove global vars (there is no default value)
++ "P" after the last non-blank in a line with trailing spaces doesn't work
+  correctly, use "p" instead (oddities in Vi?)
++ 'virtualedit=all': inserts two spaces at end of line (instead of only
+  one space)
++ 'virtualedit=all': if cursor is beyond end-of-line, no real spaces are
+  inserted left from cursor
++ put with count doesn't work in empty line and at EOL without trailing
+  space
++ 13-12-2007 You cannot repeat a put with the "." command.  This is currently
+  a limit in Vim, workarounds are difficult; feedkeys() might help, but it is
+  not safe to use if commands follow.
++ 13-12-2007 Also the  "1p........  trick doesn't work |redo-register|.
++ user should avoid 'virtualedit=onemore'
+
+Limits
+- You cannot make Smartput flip more than one char, e.g. move the boolean '&&'
+  operator to another place.
+- Cannot insert other things than one space, e.g. two spaces.
+- Cannot solve ambiguities (e.g. putting around quotes) ...  The opening quote
+  looks the same as the closing quote.
+- You cannot use the expression register this way: "="foobar"<cr>p
+
+Limits By Purpose
+- not useful for aligned text
+
+					 BTW: it's on the todo list since Vim3
+==============================================================================
+vim:tw=78:fo=tcq2:sts=0:ts=8:sw=8:ft=help:

@@ -1,0 +1,33 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=2095
+
+Smartput tries to reduce the need of fine-tuning spaces after a put.  Under certain conditions, it also moves a comma to the other side of the register before putting.
+
+The following keys are remapped: p, P, gp and gP.
+
+Press  <Leader>st  to toggle Smartput on and off.
+
+See also:
+    :help todo| /Smart cut.paste
+
+There is a wealth of customization options -- the help file has the details.
+
+
+Examples:
+
+    Hello World!
+Type  dwep  on "Hello"
+    World Hello!
+
+    Hello World!
+Type  dawbP  on "World"
+    World Hello!
+
+    Hello
+    ()
+Type  dww3p  on "Hello"
+    (Hello Hello Hello)
+
+    (Hello, World)
+Type  dWep  on "Hello"
+    (World, Hello)
+
