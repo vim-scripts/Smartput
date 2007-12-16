@@ -5,8 +5,8 @@
 " Smart cut/paste: Recognize words and adjust spaces before/after them.
 "
 " File:		smartput.vim
-" Last Change:	2007 Dec 15
-" Version:	0.5
+" Last Change:	2007 Dec 17
+" Version:	0.6
 " Vim Version:	Vim7
 " Author:	Andy Wokula, anwoku#yahoo*de (#* -> @.)
 "
@@ -15,6 +15,7 @@
 "
 " Installation: {{{1
 " copy file to your plugin folder
+" }}}
 
 " Script Start:
 " Script Init Folklore: {{{1
@@ -33,7 +34,7 @@ set cpo&vim
 
 " Global Defaults: {{{1
 let g:smartput_keyword = '\k'
-let g:smartput_comma = '[,]'
+let g:smartput_comma = ','
 let g:smartput_flipcomma = '(, ,) s, ,e ,. ,! ,? ,,'
 let g:smartput_types = "\t".'s s [({<( ])}>) ,;,'
 let g:smartput_app1 = ',.!?:'
@@ -112,12 +113,15 @@ function! <sid>Smartput(putcmd)
 
     let curcol = col(".") - 1
     let curlnum = line(".")
+    let line = getline(curlnum)
     let toofar = 0
     if nogput ==# "p"
-	let curcol += 1
-	let toofar = 1
+	let lencac = strlen(matchstr(line, ".", curcol))
+	" len of char at cursor
+	let curcol += lencac
+	let toofar = lencac
     endif
-    let leftcursor = strpart(getline(curlnum), 0, curcol)
+    let leftcursor = strpart(line, 0, curcol)
     if virtcol(".") >= virtcol("$") && virtcol(".") > 1
 	" cope with 'virtualedit=all'
 	let nxspaces = virtcol(".")-virtcol("$")    " without +1 ?
@@ -125,7 +129,7 @@ function! <sid>Smartput(putcmd)
 	let curcol += nxspaces
 	let rightcursor = ""
     else
-	let rightcursor = strpart(getline(curlnum), curcol)
+	let rightcursor = strpart(line, curcol)
 	if rightcursor[0] =~ '\s'
 	    let rightcursor = substitute(rightcursor, '^\s*', '','')
 	endif
@@ -135,7 +139,7 @@ function! <sid>Smartput(putcmd)
     if leftcursor =~ '^\s*$'
 	let LC = "s"	" Left Cursor, CharType start-of-line
     else
-	let LC = CharType(leftcursor[-1:])
+	let LC = CharType(matchstr(leftcursor, ".$"))
 	" keep whitespace left from cursor
     endif
     if rightcursor == ""
@@ -145,25 +149,27 @@ function! <sid>Smartput(putcmd)
 	    let toofar = 1  " needed?
 	endif
     else
-	let RC = CharType(rightcursor[0])
+	let RC = CharType(matchstr(rightcursor, "^."))
     endif
-    let LP = CharType(put[0])	    " Left Put
-    let RP = CharType(put[-1:])	    " Right Put
+    let lpchar = matchstr(put, "^.")
+    let LP = CharType(lpchar)
+    let rpchar = matchstr(put, ".$")
+    let RP = CharType(rpchar)
 
-    if LP =~ s:smartput_comma && s:FlipAdvised(LC.LP, RP.RC)
+    if stridx(s:smartput_comma, LP)>=0 && s:FlipAdvised(LC.LP, RP.RC)
 	" move comma to end of put
-	let coma = put[0]
-	let RP = CharType(coma)
+	let oldRP = RP
+	let RP = LP
 	let put = substitute(put, '^.\s*', '','')
-	let put = put . " "[!s:NeedSpace(CharType(put[-1:]), RP)] . coma
-	let LP = CharType(put[0])
-    elseif RP =~ s:smartput_comma && s:FlipAdvised(LC.LP, RP.RC)
+	let put = put . " "[!s:NeedSpace(oldRP, RP)] . lpchar
+	let LP = CharType(matchstr(put, "^."))
+    elseif stridx(s:smartput_comma, RP)>=0 && s:FlipAdvised(LC.LP, RP.RC)
 	" move comma to start of put
-	let coma = put[-1:]
-	let LP = CharType(coma)
+	let oldLP = LP
+	let LP = RP
 	let put = substitute(put, '\s*.$', '','')
-	let put = coma . " "[!s:NeedSpace(LP, CharType(put[0]))] . put
-	let RP = CharType(put[-1:])
+	let put = rpchar . " "[!s:NeedSpace(LP, oldLP)] . put
+	let RP = CharType(matchstr(put, ".$"))
     endif
 
     let asusual = 1
@@ -251,7 +257,7 @@ endfunc
 com! -bar -nargs=? -complete=custom,s:SmaToCompl SmartputToggle call s:SmartputToggle(<q-args>)
 nn <plug>SmartputToggle :SmartputToggle<cr>
 
-if !hasmapto("\<plug>SmartputToggle", "n")
+if !hasmapto("<plug>SmartputToggle", "n")
     try
 	nmap <unique> <leader>st <plug>SmartputToggle
     catch /./

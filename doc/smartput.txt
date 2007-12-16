@@ -1,6 +1,6 @@
 *smartput.txt*	Adjust spaces and commas when putting text.
 
-		For Vim version 7.0.  Last change: 2007 Dec 15
+		For Vim version 7.0.  Last change: 2007 Dec 17
 		By Andy Wokula, anwoku#yahoo*de (#* -> @.)
 
 						*smartput* *smartput.vim*
@@ -157,8 +157,8 @@ From Smartput's point of view, commas are CharTypes that can switch sides in
 the register.
 
 						*g:smartput_comma*
-Pattern for CharTypes that can switch sides in the register: >
-	:let g:smartput_comma = '[,]'
+CharTypes to be regarded as commas: >
+	:let g:smartput_comma = ','
 This flips the characters "," and ";" (note the ",;," mapping in
 |g:smartput_types|).
 
@@ -303,6 +303,13 @@ Bugs:
   not safe to use if commands follow.
 + 13-12-2007 Also the  "1p........  trick doesn't work |redo-register|.
 + user should avoid 'virtualedit=onemore'
+v0.6 16-12-2007
++ was not working with UTF-8
+  ! still assumes single byte white space;
+  side effect: "p" on an empty line now doesn't insert a preceding space
+  (matter of taste?)
++ changed smartput_comma: now a string of CharTypes, like the other vars
++ don't escape special chars for hasmapto()
 
 Limits
 - You cannot make Smartput flip more than one char, e.g. move the boolean '&&'
